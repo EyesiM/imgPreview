@@ -37,6 +37,7 @@ const __DEFAULT = {
     rotate: ['up', 'down'],
     close: 'escape'
   },
+  pagiNum: 6,
   // 图标字体
   // iconfont: '//at.alicdn.com/t/font_613889_qd2ugx65fxadzpvi.css'
   iconfont: './src/assets/fonts/iconfont.css'
@@ -46,7 +47,7 @@ const __DEFAULT = {
 
 const Z_INDEX = 9999
 
-class ZxImageView {
+class ImgPreview {
   constructor (opts, arr) {
     if (typeof arr === 'undefined' && util.isArray(opts)) {
       arr = opts
@@ -73,7 +74,8 @@ class ZxImageView {
       tag: 'div',
       attrs: {
         class: 'preview-img',
-        style: 'visibility: hidden'
+        // style: 'visibility: hidden'
+        style: 'display: none'
       },
       child: []
     }
@@ -104,27 +106,79 @@ class ZxImageView {
     // if(opts.showImg) {
       // 预览图片
       vnode.child.push({
+        tag: 'div',
+        attrs: {
+          class: 'target-viewer'
+        },
+        child: [{
           tag: 'div',
           attrs: {
-            class: 'target-contain v-transition'
+            class: 'target-contain'
           },
           child: [{
             tag: 'img',
             attrs: {
-              class: 'targetImg v-transition'
+              class: 'targetImg'
             }
           }]
-        })
+        }]
+      })
     // }
     // 显示左右箭头
     if (opts.showSwitchArrow) {
       // 左右方向箭头
-      vnode.child[1].child.push({tag: 'div', attrs: {class: 'iconfont icon-shangyizhang pre-arrow'}})
-      vnode.child[1].child.push({tag: 'div', attrs: {class: 'iconfont icon-xiayizhang next-arrow'}})
+      vnode.child[1].child.push({
+        tag: 'div',
+        attrs: {
+          class: 'pre-arrow'
+        },
+        child: [{
+          tag: 'div',
+          attrs: {
+            class: 'iconfont icon-shangyizhang'
+          },
+        }]
+      })
+      vnode.child[1].child.push({
+        tag: 'div',
+        attrs: {
+          class: 'next-arrow'
+        },
+        child: [{
+          tag: 'div',
+          attrs: {
+            class: 'iconfont icon-xiayizhang '
+          },
+        }]
+      })
     }
     // 分页栏
     if (opts.showPagination) {
-      vnode.child.push({tag: 'div', attrs: {class: 'preview-img-list'}})
+      vnode.child.push({
+        tag: 'div',
+        attrs: {
+          class: 'list-contain'
+        },
+        child: [
+          {
+            tag: 'div',
+            attrs: {
+              class: 'preview-img-list'
+            }
+          },
+          {
+            tag: 'div',
+            attrs: {
+              class: 'iconfont icon-shangyizhang list-pre'
+            }
+          },
+          {
+            tag: 'div',
+            attrs: {
+              class: 'iconfont icon-xiayizhang list-next'}
+          }
+        ]
+      })
     }
     // 工具栏
     if (opts.showToolbar) {
@@ -179,36 +233,36 @@ class ZxImageView {
               }
             ]
           },
-          {
-            tag: 'span',
-            attrs: {
-              class: '_item'
-            },
-            child: [
-              {
-                tag: 'i',
-                attrs: {
-                  class: 'iconfont icon-shangyizhang',
-                  title: '上一张'
-                }
-              }
-            ]
-          },
-          {
-            tag: 'span',
-            attrs: {
-              class: '_item'
-            },
-            child: [
-              {
-                tag: 'i',
-                attrs: {
-                  class: 'iconfont icon-xiayizhang',
-                  title: '下一张'
-                }
-              }
-            ]
-          },
+          // {
+          //   tag: 'span',
+          //   attrs: {
+          //     class: '_item'
+          //   },
+          //   child: [
+          //     {
+          //       tag: 'i',
+          //       attrs: {
+          //         class: 'iconfont icon-shangyizhang',
+          //         title: '上一张'
+          //       }
+          //     }
+          //   ]
+          // },
+          // {
+          //   tag: 'span',
+          //   attrs: {
+          //     class: '_item'
+          //   },
+          //   child: [
+          //     {
+          //       tag: 'i',
+          //       attrs: {
+          //         class: 'iconfont icon-xiayizhang',
+          //         title: '下一张'
+          //       }
+          //     }
+          //   ]
+          // },
           {
             tag: 'span',
             attrs: {
@@ -234,7 +288,7 @@ class ZxImageView {
                 tag: 'i',
                 attrs: {
                   class: 'iconfont icon-yulan-PC',
-                  title: '下载'
+                  title: '预览'
                 }
               }
             ]
@@ -253,6 +307,13 @@ class ZxImageView {
     this.$imgContainer =  dom.query('.target-contain', this.$container)
     // 分页栏
     this.$pagination = dom.query('.preview-img-list', this.$container)
+    this.$paginationList = dom.query('.list-contain', this.$container)
+    console.log(this.$pageList)
+    this.$nextPage = dom.query('.list-next', this.$container)
+    this.$prePage = dom.query('.list-pre', this.$container)
+    // 上下图
+    this.$preArrow = dom.query('.pre-arrow', this.$container)
+    this.$nextArrow = dom.query('.next-arrow', this.$container)
     // 工具栏
     this.$tool = dom.query('.toolbar-footer', this.$container)
     // 背景透明度
@@ -300,13 +361,14 @@ class ZxImageView {
   // 重置分页html结构
   _resetPaginationInnerHtml () {
     if (!this.$pagination) return
-    let html = ''
+    let html = '<ul class="page-list">'
     let len = this.images.length
     this.images.forEach((item, index) => {
       // html += `<i style="width:${Math.floor(1 / len * 100)}%" data-index="${index}" class="_item${this.index === index ? ' _item-active' : ''}"></i>`
-      html += `<span style="display:inline-block;background-image: url(${item.url});background-size: cover;" data-index="${index}" src="${item.url}" class="_item${this.index === index ? ' _item-active' : ''}"></span>`
+      html += `<li style="display:inline-block;background-image: url(${item.url});background-size: cover;" data-index="${index}" src="${item.url}" class="_item${this.index === index ? ' _item-active' : ''}"></li>`
     })
-    this.$pagination.innerHTML = html
+    this.$pagination.innerHTML = html + '</ul>'
+    this.$pageList = dom.query('.page-list', this.$container)
     this._checkArrowPrevNext()
   }
 
@@ -362,7 +424,12 @@ class ZxImageView {
     let angle = util.int(_angle || item.angle)
     // 根据缩略图设置的旋转角度，重置预览图片的旋转角度
     dom.attr(this.$img, 'rotate-angle', angle)
-    ic.rotate(this.$img, angle, this.$imgContainer, firstView)
+    console.log(this.$container)
+    ic.rotate(this.$img, angle, this.$imgContainer, firstView, this.$container)
+    console.log( this.$img )
+    if( this.images.length * 40 < this.$img.dataViewWidth ) {
+      console.log('no')
+    }
   }
 
   /**
@@ -388,18 +455,14 @@ class ZxImageView {
       this.$img.style.cursor = 'auto'
     }
     // 点击preview容器
-    // this.$container.addEventListener('click', e => {
-    //   const $el = e.target
-    //   console.log($el)
-    //   console.log(this)
-    //   // if (dom.hasClass($el, 'icon-shangyizhang')) {
-    //   //   this.prev()
-    //   // } else if (dom.hasClass($el, 'icon-xiayizhang')) {
-    //   //   this.next()
-    //   // } else {
-    //     this.hide()
-    //   // }
-    // })
+    this.$container.addEventListener('click', e => {
+      const $el = e.target
+      if (dom.hasClass($el, 'pre-arrow') || dom.hasClass($el.parentElement, 'pre-arrow')) {
+        this.prev()
+      } else if (dom.hasClass($el, 'next-arrow') || dom.hasClass($el.parentElement, 'next-arrow')) {
+        this.next()
+      }
+    })
 
     // 工具栏点击事件
     this.$tool && this.$tool.addEventListener('click', e => {
@@ -428,6 +491,14 @@ class ZxImageView {
       else if (dom.hasClass($el, 'icon-youxuanzhuan')) {
         this._rotate()
       }
+      //预览
+      else if (dom.hasClass($el, 'icon-yulan-PC')) {
+        if (this.$paginationList.style.display === 'block') {
+          this.$paginationList.style.display = 'none'
+        } else {
+          this.$paginationList.style.display = 'block'
+        }
+      }
     }, true)
 
     // 点击统计栏
@@ -435,10 +506,18 @@ class ZxImageView {
       // 处理事件
       this._handleChangePage(e)
     })
-
+    
     // 点击统计栏，阻止事件冒泡
     this.$pagination && this.$pagination.addEventListener('click', e => {
       e.stopPropagation()
+    })
+
+    //点击切换上下页
+    this.$nextPage.addEventListener('click', e => {
+      this.nextPage()
+    })
+    this.$prePage.addEventListener('click', e => {
+      this.prePage()
     })
 
     const keys = this.opts.keyboard || {}
@@ -569,7 +648,8 @@ class ZxImageView {
   // 隐藏图片预览
   hide () {
     if (this.$container) {
-      this.$container.style.visibility = 'hidden'
+      // this.$container.style.visibility = 'hidden'
+      this.$container.style.display = 'none'
       this.isPreview = false
     }
   }
@@ -581,7 +661,8 @@ class ZxImageView {
       if (zIndex > Z_INDEX) {
         this.$container.style.zIndex = zIndex
       }
-      this.$container.style.visibility = 'visible'
+      // this.$container.style.visibility = 'visible'
+      this.$container.style.display = 'block'
       this.isPreview = true
     }
   }
@@ -596,6 +677,30 @@ class ZxImageView {
     this._switchImage('next')
   }
 
+  //下一页
+  nextPage () {
+    console.log('nextPage')
+    console.log(this)
+    console.log('nextPage', this.images.length, this.pagiNum)
+    dom.rmClass(this.$pageList, 'v-transition')
+    if (Math.abs(this.$pageList.transformX) <= (this.images.length - this.opts.pagiNum) * 40 || !this.$pageList.transformX) {
+      let transformX = (this.$pageList.transformX || 0) - 40 * 5
+      this.$pageList.transformX = transformX
+      this.$pageList.style.transform = 'translateX(' + transformX + 'px)'
+      dom.addClass(this.$pageList, 'v-transition')
+    }
+  }
+  
+  //上一页
+  prePage() {
+    if (this.$pageList.transformX < 0) {
+      dom.rmClass(this.$pageList, 'v-transition')
+      let transformX = (this.$pageList.transformX || 0) + 40 * 5
+      this.$pageList.transformX = transformX
+      this.$pageList.style.transform = 'translateX(' + transformX + 'px)'
+      dom.addClass(this.$pageList, 'v-transition')
+    }
+  }
   /**
    * 旋转
    * @param isAnticlockwise 是否逆时针
@@ -616,7 +721,7 @@ class ZxImageView {
   _scale (wheelDelta) {
     // 禁止缩放
     if (!this.opts.scalable) return
-    ic.scale(this.$img, wheelDelta)
+    ic.scale(this.$img, wheelDelta, this.$preArrow, this.$nextArrow)
   }
 
   // 切换
@@ -641,6 +746,7 @@ class ZxImageView {
     }
     let item = this.images[this.index]
     this.$img.src = item.url
+    this.$img.style.cursor = 'default'
     const angle = util.int(item.angle)
     // 根据缩略图设置的旋转角度，重置预览图片的旋转角度
     dom.attr(this.$img, 'rotate-angle', angle)
@@ -670,4 +776,4 @@ class ZxImageView {
   // }
 }
 
-export { ZxImageView }
+export { ImgPreview }

@@ -7,13 +7,13 @@ export default {
    * @param $img 缩放对象
    * @param wheelDelta > 0放大或 < 0缩小
    */
-  scale ($img, wheelDelta) {
+  scale ($img, wheelDelta, $preArrow, $nextArrow) {
     if (wheelDelta > 0) {
       // 放大
-      this._scaleHandler($img, true)
+      this._scaleHandler($img, true, $preArrow, $nextArrow)
     } else {
       // 缩小
-      this._scaleHandler($img)
+      this._scaleHandler($img, false, $preArrow, $nextArrow)
     }
   },
   resetImgCenter($img) {
@@ -21,11 +21,34 @@ export default {
     // $img.dataHeight = ih
     // viewerWidth = $img.dataViewWidth
     // $img.dataviewHeight = viewerHeight
-    $img.dataLeft = ($img.dataViewWidth - $img.dataWidth) / 2
-    $img.dataTop = ($img.dataviewHeight - $img.dataHeight) / 2
+    let angle = $img.dataRotate
+    let viewerWidth = $img.dataViewWidth
+    let viewerHeight = $img.dataviewHeight
+    let iw = $img.dataWidth
+    let ih = $img.dataHeight
+    let it, il
+      if (angle/90%4 === 1) {
+        it = (iw - viewerWidth) / 2
+        il = (viewerHeight - ih) / 2
+      } else if(angle/90%4 === 3) {
+        console.log('??')
+        it = (viewerWidth - iw) / 2
+        il = (ih - viewerHeight) / 2
+      } else if (angle/90%4 === 2) {
+        il = (viewerWidth - iw) / 2
+        it = (ih - viewerHeight) / 2
+      } else {
+        il = (viewerWidth - iw) / 2
+        it = (viewerHeight - ih) / 2
+      }
+    // $img.dataLeft = ($img.dataViewWidth - $img.dataWidth) / 2
+    // $img.dataTop = ($img.dataviewHeight - $img.dataHeight) / 2
+    $img.dataLeft = il
+    $img.dataTop = it
+    
   },
   // @param isEnlarge 是否放大
-  _scaleHandler ($img, isEnlarge) {
+  _scaleHandler ($img, isEnlarge, $preArrow, $nextArrow) {
     // console.log($img.dataRotate)
     // console.log($img.dataLeft)
     // console.log($img.dataTop)
@@ -47,6 +70,20 @@ export default {
       if (iw <= MIN_SIZE) return
       dataScale *= 0.6
     }
+    if (dataScale > 1) {
+      $img.style.cursor = 'move'
+      $preArrow.style.width = '0';
+      $nextArrow.style.width = '0';
+      // $preArrow.style.height = '0';
+      // $nextArrow.style.height = '0';
+      // $img.style.cursor = 'move'
+    } else {
+      $img.style.cursor = 'default'
+      $preArrow.style.width = '40%';
+      $nextArrow.style.width = '40%';
+      $preArrow.style.height = '100%';
+      $nextArrow.style.height = '100%';
+    }
     $img.dataScale = dataScale
     this.handleImg($img)
   },
@@ -61,18 +98,14 @@ export default {
     $img.style.height = height
   },
   // 旋转
-  rotate ($img, angle, imgContainer, firstView) {
+  rotate ($img, angle, imgContainer, firstView, $containFather) {
     // ie9及以下浏览器禁用旋转
     if (util.isLeIE9()) angle = 0
-    // console.error(angle)
     $img.dataLeft = 0
     $img.dataTop = 0
     $img.dataScale = 1
     $img.dataRotate = angle
-    // $img.style.transform = `rotate(${angle}deg)`
-    // console.log(this.$img)
-    // this.handleImg($img)
-    this._initImagePosition($img, angle, imgContainer, firstView)
+    this._initImagePosition($img, angle, imgContainer, firstView, $containFather)
   },
 
   // 移动， 拖动
@@ -88,45 +121,50 @@ export default {
       isMousedownOnImage = true
       moveBeforePostion.x = e.clientX - ($img.dataLeft || 0)
       moveBeforePostion.y = e.clientY - ($img.dataTop || 0)
-      dom.rmClass($img, 'v-transition')
+      // dom.rmClass($img, 'v-transition')
     })
 
     let l, t
     // 拖动
     document.addEventListener('mousemove', e => {
-      let maxTranfW = ($img.dataWidth * $img.dataScale - $img.dataViewWidth) / 2
-      let maxTranfH = ($img.dataHeight * $img.dataScale - $img.dataviewHeight) / 2
-      let minTranfW = ($img.dataViewWidth - $img.dataWidth * $img.dataScale) / 2
-      let minTranfH = ($img.dataviewHeight - $img.dataHeight * $img.dataScale) / 2
+      // let maxTranfW = ($img.dataWidth * $img.dataScale - $img.dataViewWidth + $img.setLeft) / 2
+      // let maxTranfH = ($img.dataHeight * $img.dataScale - $img.dataviewHeight + $img.setTop) / 2
+      // let minTranfW = ($img.dataViewWidth - $img.dataWidth * $img.dataScale + $img.setLeft) / 2
+      // let minTranfH = ($img.dataviewHeight - $img.dataHeight * $img.dataScale + $img.setTop) / 2
+      let maxTranfW = ($img.dataWidth * $img.dataScale - $img.dataViewWidth) / 2 + $img.setLeft
+      let maxTranfH = ($img.dataHeight * $img.dataScale - $img.dataviewHeight) / 2 + $img.setTop
+      let minTranfW = ($img.dataViewWidth - $img.dataWidth * $img.dataScale) / 2 + $img.setLeft
+      let minTranfH = ($img.dataviewHeight - $img.dataHeight * $img.dataScale) / 2 + $img.setTop
       if (!isMousedownOnImage) return
       e.preventDefault()
       console.log(e)
       l = e.clientX - moveBeforePostion.x
       t = e.clientY - moveBeforePostion.y
+      console.log($img.setLeft, $img.setTop)
       console.log(minTranfW, maxTranfW)
+      console.log(minTranfH, maxTranfH)
       if (l > minTranfW && l < maxTranfW) {
         $img.dataLeft = l
       }
       if(t > minTranfH && t < maxTranfH) {
         $img.dataTop = t
       }
-      // var rotateTranform = $img.style.transform.split(' ')[0]
-      // $img.style.transform = rotateTranform + ' translate(' + l + 'px,' + t + 'px)'
       this.handleImg($img)
     })
 
     // 释放鼠标
     document.addEventListener('mouseup', e => {
       isMousedownOnImage = false
-      dom.addClass($img, 'v-transition')
+      // dom.addClass($img, 'v-transition')
     })
   },
 
   // 设置图片显示尺寸及位置
-  _initImagePosition ($img, angle, $imgContainer, firstView) {
+  _initImagePosition ($img, angle, $imgContainer, firstView, $containFather) {
     // 是否旋转
     const isRotate = util.int(angle / 90) % 2
-    let imgWidth, imgHeight, iw, ih, winRatio, imgRatio, imgViewRatio, viewerWidth, viewerHeight
+    console.log(isRotate)
+    let imgWidth, imgHeight, iw, ih, winRatio, imgRatio, imgViewRatio, viewerWidth, viewerHeight, il, it
     // 屏幕尺寸
     const winWidth = window.innerWidth
     const winHeight = window.innerHeight
@@ -141,46 +179,61 @@ export default {
     imgViewRatio = viewerWidth / viewerHeight
 
     if (isRotate) {
+      $img.dataRotate = angle
       imgRatio = imgHeight / imgWidth
       if (firstView) {
         //初次点击初始化图片以及图片的viewer-container的宽高
         if (imgRatio > winRatio) {
-            ih = imgHeight > winWidth * 0.9 ? winWidth * 0.9 : imgHeight
-            iw = ih * imgWidth / imgHeight
+          ih = imgHeight > winWidth * 0.8 ? winWidth * 0.8 : imgHeight
+          iw = ih * imgWidth / imgHeight
         } else {
-          iw = imgWidth > winHeight * 0.9 ? winHeight * 0.9 : imgWidth
+          iw = imgWidth > winHeight * 0.8 ? winHeight * 0.8 : imgWidth
           ih = iw * imgHeight / imgWidth
         }
         $imgContainer.style.width = iw + 'px'
         $imgContainer.style.height = ih + 'px'
+        $containFather.style.width = iw + 'px'
         viewerWidth = iw
         viewerHeight = ih
         console.log(viewerHeight, viewerWidth)
       } else {
         //非初次点击，图片的 viewer-container 已经确定
+        console.log(angle/90, 1)
+        // iw = imgWidth > winHeight * 0.8 ? winHeight * 0.8 : imgWidth
+        // ih = iw * imgHeight / imgWidth
         if (imgRatio > imgViewRatio) {
-          iw = viewerWidth
-          ih = viewerWidth / imgWidth * imgHeight
+          console.log('yes')
+          ih = viewerWidth
+          iw = viewerWidth / imgHeight * imgWidth
         } else {
-          ih = viewerHeight
-          ih = viewerHeight / imgHeight * imgWidth
+          console.log('no')
+          iw = viewerHeight
+          ih = viewerHeight / imgWidth * imgHeight
         }
+      }
+      if (angle/90%4 === 1) {
+        it = (iw - viewerWidth) / 2
+        il = (viewerHeight - ih) / 2
+      } else {
+        console.log('??')
+        it = (viewerWidth - iw) / 2
+        il = (ih - viewerHeight) / 2
       }
     } else {
       if (firstView) {
         //初次点击初始化图片以及图片的 viewer-container 的宽高
         if (imgRatio > winRatio) {
-          iw = imgWidth > winWidth * 0.9 ? winWidth * 0.9 : imgWidth
+          iw = imgWidth > winWidth * 0.8 ? winWidth * 0.8 : imgWidth
           ih = iw * imgHeight / imgWidth
         } else {
-          ih = imgHeight > winHeight * 0.9 ? winHeight * 0.9 : imgHeight
+          ih = imgHeight > winHeight * 0.8 ? winHeight * 0.8 : imgHeight
           iw = ih * imgWidth / imgHeight
         }
         $imgContainer.style.width = iw + 'px'
         $imgContainer.style.height = ih + 'px'
+        $containFather.style.width = iw + 'px'
         viewerWidth = iw
         viewerHeight = ih
-        console.log(viewerHeight, viewerWidth)
       } else {
         //非初次点击，图片的 viewer-container 已经确定
         if (imgRatio > imgViewRatio) {
@@ -191,13 +244,22 @@ export default {
           iw = viewerHeight / imgHeight * imgWidth
         }
       }
+      if (angle/90%4 === 2) {
+        il = (viewerWidth - iw) / 2
+        it = (ih - viewerHeight) / 2
+      } else {
+        il = (viewerWidth - iw) / 2
+        it = (viewerHeight - ih) / 2
+      }
     }
     $img.dataWidth = iw
     $img.dataHeight = ih
     $img.dataViewWidth = viewerWidth
     $img.dataviewHeight = viewerHeight
-    $img.dataLeft = (viewerWidth - iw) / 2
-    $img.dataTop = (viewerHeight - ih) / 2
+    $img.dataLeft = il
+    $img.dataTop = it
+    $img.setLeft = il || 0
+    $img.setTop = it || 0
     this.handleImg($img)
   }
 }

@@ -1,15 +1,10 @@
 import { getUuid } from './utils/uiid'
-import { ZxImageView } from './plugin/imgPreview/index'
-// import { ZxImageView } from './plugin/zxImageView'
-// import { ZxImageView } from './plugins/zxImageView'
+import { ImgPreview } from './plugin/imgPreview/index'
+import './plugin/voiceOpen/index'
 
 let uiid = getUuid(9, Math.ceil(Math.random()*52))
 var previewList = document.getElementById('previewList')
 var targetImg = document.getElementById('targetImg')
-// var textAddBtn = document.getElementById('okBtn');
-// var saveBtn = document.getElementById('saveBtn');
-
-
 
 // previewList.onclick = function(e) {
     var imgList = previewList.getElementsByTagName('img')
@@ -25,7 +20,7 @@ var targetImg = document.getElementById('targetImg')
     var options = {
         // 见参数说明处
     }
-    var ziv1 = new ZxImageView(options, imgArr)
+    var ziv1 = new ImgPreview(options, imgArr)
     // 点击缩略图，查看大图
     var $el = document.getElementById('previewList')
     $el.addEventListener('click', function (e) {
